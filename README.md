@@ -1,16 +1,64 @@
-# React + Vite
+# 👁️🖋️ InkSight
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> **An AI-Powered Grading & Insights Platform for Educators**
 
-Currently, two official plugins are available:
+InkSight is a smart grading assistant that saves teachers hours of manual work. It allows educators to snap photos of handwritten essays, grades them instantly using a custom rubric, and builds visual dashboards to show exactly which topics a class is struggling with. Behind the scenes, it protects student privacy, uses a backup AI so it never crashes, and carefully manages data to avoid system limits.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🚀 The Mission
+To eliminate grading bottlenecks while generating structured, actionable data from unstructured handwritten text. InkSight honors the traditional element of education (handwritten expression) while utilizing a fault-tolerant AI architecture and rigorous data privacy standards to support teachers.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Technology Stack
+* **Frontend:** React.js (Vite) styled with Tailwind CSS
+* **Database & Auth:** Supabase (PostgreSQL)
+* **Primary AI Engine:** Google Gemini 1.5 Flash API (Multimodal Image + Text)
+* **Fallback AI Engine:** OpenAI API (GPT-4o-mini)
+* **Image Processing:** Native HTML5/JavaScript File API (Base64 conversion)
+* **Data Visualization:** Recharts
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## ✨ Core Engineering Features
+
+### 🧠 The Dual-Brain Fail-Safe Pipeline
+Implements a redundant `try/catch` routing system. If the primary Gemini model times out or hits a rate limit, the system silently intercepts the failure and routes the exact prompt to the OpenAI fallback, ensuring zero downtime for the user.
+
+### 🚦 Concurrency Control & Rate Limit Management
+To prevent `429 Too Many Requests` errors when processing batch uploads (e.g., 40+ essays), the ingestion pipeline utilizes a Promise Queue to orchestrate asynchronous API requests in controlled, localized batches.
+
+### 🛡️ Client-Side PII Masking
+Ensuring strict educational data governance, all Personally Identifiable Information (PII) is masked client-side. Student names are temporarily replaced with anonymous IDs (e.g., `Student_01`) before payloads hit third-party LLMs, and are re-mapped locally upon the return of the JSON response.
+
+### 📊 BI Analytics & Competency Gap Tracking
+Moving beyond simple grading, InkSight stores execution metadata and structured rubric results in PostgreSQL. This powers a Recharts dashboard featuring:
+* **Competency Gap Analyzer:** Visualizes class-wide mastery gaps based on specific rubric misses.
+* **NLP Word Cloud:** Aggregates top keywords across essays to visualize class vocabulary trends.
+* **Multi-Section Filtering:** Allows granular filtering across different class sections.
+
+---
+
+## 🏗️ System Architecture 
+
+```text
+[Physical Written Essays] -> [Camera/Upload]
+                                  │
+                                  ▼
+                        [ React Frontend ]
+            ┌─────────────────────┴─────────────────────┐
+            ▼                                           ▼
+   (PII Name Masking)                          (Rate-Limit Queue)
+            │                                           │
+            └─────────────────────┬─────────────────────┘
+                                  ▼
+                       [ Gemini 1.5 Flash ] ──(If 429/Fail)──> [ GPT-4o-Mini ]
+                                  │                                   │
+                                  └──────────────────┬────────────────┘
+                                                     ▼
+                                         [ Structured JSON Result ]
+                                                     │
+                                                     ▼
+                                           [ Supabase Data Log ]
+                                                     │
+                                                     ▼
+                                         [ Recharts BI Dashboard ]
