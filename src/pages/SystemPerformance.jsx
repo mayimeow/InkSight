@@ -5,9 +5,23 @@ import {
 } from 'recharts'
 import { Loader2, Zap, ShieldCheck, Clock, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import PageHeader from '../components/PageHeader'
 
 const ENGINE_COLORS = { groq: '#3b82f6', gemini: '#8b5cf6' }
 const STATUS_COLORS = { COMPLETED: '#22c55e', FAILED: '#ef4444', PROCESSING: '#f59e0b', PENDING: '#9ca3af' }
+
+function StatCard({ label, value, sub, icon: Icon, iconClass }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500 font-medium">{label}</p>
+        <Icon size={16} className={iconClass} />
+      </div>
+      <p className="text-2xl font-display font-semibold text-gray-900 mt-1">{value}</p>
+      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+    </div>
+  )
+}
 
 export default function SystemPerformance() {
   const [submissions, setSubmissions] = useState([])
@@ -22,11 +36,8 @@ export default function SystemPerformance() {
         .select('status, engine_used, latency_ms, token_count, created_at')
         .order('created_at', { ascending: true })
 
-      if (error) {
-        setError('Could not load performance data.')
-      } else {
-        setSubmissions(data || [])
-      }
+      if (error) setError('Could not load performance data.')
+      else setSubmissions(data || [])
       setLoading(false)
     }
     fetchAll()
@@ -66,13 +77,10 @@ export default function SystemPerformance() {
       const key = s.status || 'PENDING'
       if (counts[key] !== undefined) counts[key] += 1
     })
-    return Object.entries(counts)
-      .filter(([, v]) => v > 0)
-      .map(([name, value]) => ({ name, value }))
+    return Object.entries(counts).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value }))
   }, [submissions])
 
   const latencyTrend = useMemo(() => {
-    // Bucket graded submissions into groups of up to 10 for a readable trend line
     const bucketSize = Math.max(1, Math.ceil(graded.length / 15))
     const buckets = []
     for (let i = 0; i < graded.length; i += bucketSize) {
@@ -93,80 +101,62 @@ export default function SystemPerformance() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold text-ink-maroon">System Performance</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Pipeline reliability, grading speed, and AI engine usage across all assignments
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Pipeline Health"
+        title="System Performance"
+        subtitle="Reliability, grading speed, and AI engine usage across every assignment."
+      />
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
 
       {stats.total === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-10 text-center text-sm text-gray-400">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center text-sm text-gray-400">
           No submissions processed yet. Grade some essays in the Processing Queue first.
         </div>
       ) : (
         <>
-          {/* Stat cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-gray-500">Reliability Rate</p>
-                <ShieldCheck size={16} className="text-green-500" />
-              </div>
-              <p className="text-2xl font-bold text-gray-800 mt-1">{stats.reliabilityRate}%</p>
-              <p className="text-xs text-gray-400 mt-1">{stats.completed} of {stats.total} succeeded</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-gray-500">Avg Grading Speed</p>
-                <Clock size={16} className="text-blue-500" />
-              </div>
-              <p className="text-2xl font-bold text-gray-800 mt-1">{(stats.avgLatency / 1000).toFixed(1)}s</p>
-              <p className="text-xs text-gray-400 mt-1">per essay</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-gray-500">Primary Engine Usage</p>
-                <Zap size={16} className="text-ink-gold" />
-              </div>
-              <p className="text-2xl font-bold text-gray-800 mt-1">{stats.primaryUsageRate}%</p>
-              <p className="text-xs text-gray-400 mt-1">handled by Groq</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-gray-500">Failed Submissions</p>
-                <AlertTriangle size={16} className="text-red-400" />
-              </div>
-              <p className="text-2xl font-bold text-gray-800 mt-1">{stats.failed}</p>
-              <p className="text-xs text-gray-400 mt-1">~{stats.totalTokens.toLocaleString()} tokens processed</p>
-            </div>
+            <StatCard
+              label="Reliability Rate"
+              value={`${stats.reliabilityRate}%`}
+              sub={`${stats.completed} of ${stats.total} succeeded`}
+              icon={ShieldCheck}
+              iconClass="text-green-500"
+            />
+            <StatCard
+              label="Avg Grading Speed"
+              value={`${(stats.avgLatency / 1000).toFixed(1)}s`}
+              sub="per essay"
+              icon={Clock}
+              iconClass="text-blue-500"
+            />
+            <StatCard
+              label="Primary Engine Usage"
+              value={`${stats.primaryUsageRate}%`}
+              sub="handled by Groq"
+              icon={Zap}
+              iconClass="text-ink-gold"
+            />
+            <StatCard
+              label="Failed Submissions"
+              value={stats.failed}
+              sub={`~${stats.totalTokens.toLocaleString()} tokens processed`}
+              icon={AlertTriangle}
+              iconClass="text-red-400"
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Engine breakdown pie */}
-            <div className="bg-white rounded-xl shadow-sm p-5">
-              <h2 className="font-semibold text-gray-800 mb-4">Engine Usage (Fail-Safe Wrapper)</h2>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h2 className="font-display text-base font-semibold text-gray-900 mb-4">Engine Usage (Fail-Safe Wrapper)</h2>
               {engineBreakdown.length === 0 ? (
                 <p className="text-sm text-gray-400">No graded submissions yet.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
-                    <Pie
-                      data={engineBreakdown}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      label={(entry) => `${entry.value}`}
-                    >
+                    <Pie data={engineBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(entry) => `${entry.value}`}>
                       {engineBreakdown.map((entry) => (
-                        <Cell
-                          key={entry.name}
-                          fill={entry.name.startsWith('Groq') ? ENGINE_COLORS.groq : ENGINE_COLORS.gemini}
-                        />
+                        <Cell key={entry.name} fill={entry.name.startsWith('Groq') ? ENGINE_COLORS.groq : ENGINE_COLORS.gemini} />
                       ))}
                     </Pie>
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -175,26 +165,17 @@ export default function SystemPerformance() {
                 </ResponsiveContainer>
               )}
               {stats.geminiCount > 0 && (
-                <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2 mt-2">
-                  Fallback triggered {stats.geminiCount} time{stats.geminiCount !== 1 ? 's' : ''} — proves redundancy is working.
+                <p className="text-xs text-amber-700 bg-amber-50 rounded-lg p-2.5 mt-2">
+                  Fallback triggered {stats.geminiCount} time{stats.geminiCount !== 1 ? 's' : ''} — redundancy is working as designed.
                 </p>
               )}
             </div>
 
-            {/* Status breakdown pie */}
-            <div className="bg-white rounded-xl shadow-sm p-5">
-              <h2 className="font-semibold text-gray-800 mb-4">Submission Status Breakdown</h2>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h2 className="font-display text-base font-semibold text-gray-900 mb-4">Submission Status Breakdown</h2>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
-                  <Pie
-                    data={statusBreakdown}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    label={(entry) => `${entry.value}`}
-                  >
+                  <Pie data={statusBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(entry) => `${entry.value}`}>
                     {statusBreakdown.map((entry) => (
                       <Cell key={entry.name} fill={STATUS_COLORS[entry.name] || '#ccc'} />
                     ))}
@@ -206,9 +187,8 @@ export default function SystemPerformance() {
             </div>
           </div>
 
-          {/* Latency trend */}
-          <div className="bg-white rounded-xl shadow-sm p-5">
-            <h2 className="font-semibold text-gray-800 mb-4">Average Grading Speed Over Time</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <h2 className="font-display text-base font-semibold text-gray-900 mb-4">Average Grading Speed Over Time</h2>
             {latencyTrend.length < 2 ? (
               <p className="text-sm text-gray-400">Grade more essays to see a speed trend.</p>
             ) : (
@@ -218,7 +198,7 @@ export default function SystemPerformance() {
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} unit="ms" />
                   <Tooltip />
-                  <Line type="monotone" dataKey="avgLatency" stroke="#5C0F1A" strokeWidth={2} dot={false} name="Avg Latency (ms)" />
+                  <Line type="monotone" dataKey="avgLatency" stroke="#5C0F1A" strokeWidth={2.5} dot={false} name="Avg Latency (ms)" />
                 </LineChart>
               </ResponsiveContainer>
             )}

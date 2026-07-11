@@ -5,4 +5,10 @@
   --color-ink-maroon-dark: #45090F;
   --color-ink-cream: #FAF7F2;
   --color-ink-gold: #C9A227;
+  --font-display: "Fraunces", serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
 }

@@ -1,18 +1,27 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Loader2, CheckCircle2, Clock, AlertCircle, PlayCircle } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import PageHeader from '../components/PageHeader'
 
-const CONCURRENCY = 3 // matches your spec's "batches of 2-3 at a time"
+const CONCURRENCY = 3
 
 function maskName(index) {
   return `Student_${String(index + 1).padStart(2, '0')}`
+}
+
+function StatCard({ label, value, valueClass = 'text-gray-900' }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      <p className="text-xs text-gray-500 font-medium">{label}</p>
+      <p className={`text-2xl font-display font-semibold mt-1 ${valueClass}`}>{value}</p>
+    </div>
+  )
 }
 
 export default function ProcessingQueue() {
   const [assignments, setAssignments] = useState([])
   const [selectedAssignmentId, setSelectedAssignmentId] = useState('')
   const [loadingAssignments, setLoadingAssignments] = useState(true)
-
   const [submissions, setSubmissions] = useState([])
   const [loadingSubmissions, setLoadingSubmissions] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -43,29 +52,21 @@ export default function ProcessingQueue() {
       .eq('assignment_id', selectedAssignmentId)
       .order('created_at', { ascending: true })
 
-    if (error) {
-      setError('Could not load submissions.')
-    } else {
-      setSubmissions(data || [])
-    }
+    if (error) setError('Could not load submissions.')
+    else setSubmissions(data || [])
     setLoadingSubmissions(false)
   }, [selectedAssignmentId])
 
-  useEffect(() => {
-    fetchSubmissions()
-  }, [fetchSubmissions])
+  useEffect(() => { fetchSubmissions() }, [fetchSubmissions])
 
   const selectedAssignment = assignments.find((a) => a.id === selectedAssignmentId)
 
-  const updateLocalStatus = (id, patch) => {
+  const updateLocalStatus = (id, patch) =>
     setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)))
-  }
 
   const gradeOne = async (submission) => {
     updateLocalStatus(submission.id, { status: 'PROCESSING' })
 
-    // PII masking: only the essay content and rubric are sent to the AI.
-    // The student's real name never leaves this local state / your Supabase DB.
     const isImage = submission.raw_content?.startsWith('data:image')
     const payload = {
       rubric: {
@@ -108,7 +109,6 @@ export default function ProcessingQueue() {
     const pending = submissions.filter((s) => s.status === 'PENDING' || !s.status)
     let index = 0
 
-    // Simple concurrency pool — respects the rate-limit queue requirement
     const worker = async () => {
       while (index < pending.length) {
         const current = pending[index]
@@ -119,7 +119,6 @@ export default function ProcessingQueue() {
 
     const workerCount = Math.min(CONCURRENCY, pending.length)
     await Promise.all(Array.from({ length: workerCount }, () => worker()))
-
     setIsProcessing(false)
   }
 
@@ -133,28 +132,27 @@ export default function ProcessingQueue() {
   const statusBadge = (status) => {
     switch (status) {
       case 'COMPLETED':
-        return <span className="flex items-center gap-1 text-green-600 text-xs font-medium"><CheckCircle2 size={14} /> Graded</span>
+        return <span className="flex items-center gap-1 text-green-700 text-xs font-medium bg-green-50 px-2 py-1 rounded-full w-fit"><CheckCircle2 size={13} /> Graded</span>
       case 'PROCESSING':
-        return <span className="flex items-center gap-1 text-amber-600 text-xs font-medium"><Loader2 size={14} className="animate-spin" /> Processing</span>
+        return <span className="flex items-center gap-1 text-amber-700 text-xs font-medium bg-amber-50 px-2 py-1 rounded-full w-fit"><Loader2 size={13} className="animate-spin" /> Processing</span>
       case 'FAILED':
-        return <span className="flex items-center gap-1 text-red-600 text-xs font-medium"><AlertCircle size={14} /> Failed</span>
+        return <span className="flex items-center gap-1 text-red-700 text-xs font-medium bg-red-50 px-2 py-1 rounded-full w-fit"><AlertCircle size={13} /> Failed</span>
       default:
-        return <span className="flex items-center gap-1 text-gray-400 text-xs font-medium"><Clock size={14} /> Pending</span>
+        return <span className="flex items-center gap-1 text-gray-500 text-xs font-medium bg-gray-100 px-2 py-1 rounded-full w-fit"><Clock size={13} /> Pending</span>
     }
   }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold text-ink-maroon">Processing Queue</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          AI is grading essays. You can track progress in real-time.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Step Three"
+        title="Processing Queue"
+        subtitle="Grade essays with automatic fail-safe redundancy. Track progress in real time."
+      />
 
       {/* Assignment selector */}
-      <div className="bg-white rounded-xl shadow-sm p-5">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Assignment</label>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Assignment</label>
         {loadingAssignments ? (
           <p className="text-sm text-gray-400 flex items-center gap-2">
             <Loader2 size={14} className="animate-spin" /> Loading assignments...
@@ -165,44 +163,30 @@ export default function ProcessingQueue() {
           <select
             value={selectedAssignmentId}
             onChange={(e) => setSelectedAssignmentId(e.target.value)}
-            className="w-full md:w-96 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ink-maroon/40"
+            className="w-full md:w-96 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-ink-maroon/10 focus:border-ink-maroon transition-all"
           >
-            {assignments.map((a) => (
-              <option key={a.id} value={a.id}>{a.title}</option>
-            ))}
+            {assignments.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
           </select>
         )}
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-500">Total Essays</p>
-          <p className="text-2xl font-bold text-gray-800">{total}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-500">Completed</p>
-          <p className="text-2xl font-bold text-green-600">{completed}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-500">Processing</p>
-          <p className="text-2xl font-bold text-amber-600">{processingCount}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-500">Pending</p>
-          <p className="text-2xl font-bold text-gray-500">{pendingCount}</p>
-        </div>
+        <StatCard label="Total Essays" value={total} />
+        <StatCard label="Completed" value={completed} valueClass="text-green-600" />
+        <StatCard label="Processing" value={processingCount} valueClass="text-amber-600" />
+        <StatCard label="Pending" value={pendingCount} valueClass="text-gray-400" />
       </div>
 
       {/* Progress bar */}
-      <div className="bg-white rounded-xl shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-medium text-gray-700">Overall Progress</p>
           <p className="text-sm text-gray-500">{progressPct}%</p>
         </div>
-        <div className="w-full bg-gray-100 rounded-full h-2.5">
+        <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
           <div
-            className="bg-ink-maroon h-2.5 rounded-full transition-all"
+            className="bg-ink-maroon h-2.5 rounded-full transition-all duration-500"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -213,7 +197,7 @@ export default function ProcessingQueue() {
       <button
         onClick={startProcessing}
         disabled={isProcessing || pendingCount === 0}
-        className="flex items-center justify-center gap-2 bg-ink-maroon text-white rounded-lg py-2.5 px-5 text-sm font-semibold hover:bg-ink-maroon-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        className="flex items-center justify-center gap-2 bg-ink-maroon text-white rounded-xl py-3 px-6 text-sm font-semibold hover:bg-ink-maroon-dark hover:shadow-md transition-all disabled:opacity-60 disabled:hover:shadow-none"
       >
         {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <PlayCircle size={16} />}
         {isProcessing
@@ -227,27 +211,27 @@ export default function ProcessingQueue() {
 
       {/* Table */}
       {submissions.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-4 md:p-5 overflow-x-auto">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 overflow-x-auto">
           <table className="w-full text-sm min-w-175">
             <thead>
-              <tr className="text-left text-gray-500 border-b">
-                <th className="py-2 pr-4 font-medium">#</th>
-                <th className="py-2 pr-4 font-medium">Student (Masked)</th>
-                <th className="py-2 pr-4 font-medium">Section</th>
-                <th className="py-2 pr-4 font-medium">Status</th>
-                <th className="py-2 pr-4 font-medium">Engine Used</th>
-                <th className="py-2 pr-4 font-medium">Latency</th>
-                <th className="py-2 font-medium">Tokens</th>
+              <tr className="text-left text-gray-400 text-xs uppercase tracking-wide border-b">
+                <th className="py-2.5 pr-4 font-semibold">#</th>
+                <th className="py-2.5 pr-4 font-semibold">Student (Masked)</th>
+                <th className="py-2.5 pr-4 font-semibold">Section</th>
+                <th className="py-2.5 pr-4 font-semibold">Status</th>
+                <th className="py-2.5 pr-4 font-semibold">Engine</th>
+                <th className="py-2.5 pr-4 font-semibold">Latency</th>
+                <th className="py-2.5 font-semibold">Tokens</th>
               </tr>
             </thead>
             <tbody>
               {submissions.map((s, i) => (
-                <tr key={s.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4 text-gray-400">{i + 1}</td>
-                  <td className="py-2 pr-4 font-medium text-gray-700">{maskName(i)}</td>
-                  <td className="py-2 pr-4">{s.section || '—'}</td>
-                  <td className="py-2 pr-4">{statusBadge(s.status)}</td>
-                  <td className="py-2 pr-4">
+                <tr key={s.id} className="border-b border-gray-50 last:border-0">
+                  <td className="py-2.5 pr-4 text-gray-400">{i + 1}</td>
+                  <td className="py-2.5 pr-4 font-medium text-gray-700">{maskName(i)}</td>
+                  <td className="py-2.5 pr-4 text-gray-500">{s.section || '—'}</td>
+                  <td className="py-2.5 pr-4">{statusBadge(s.status)}</td>
+                  <td className="py-2.5 pr-4">
                     {s.engine_used ? (
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         s.engine_used === 'groq' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
@@ -256,10 +240,10 @@ export default function ProcessingQueue() {
                       </span>
                     ) : '—'}
                   </td>
-                  <td className="py-2 pr-4 text-gray-500">
+                  <td className="py-2.5 pr-4 text-gray-500">
                     {s.latency_ms ? `${(s.latency_ms / 1000).toFixed(1)}s` : '—'}
                   </td>
-                  <td className="py-2 text-gray-500">{s.token_count || '—'}</td>
+                  <td className="py-2.5 text-gray-500">{s.token_count || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -268,7 +252,7 @@ export default function ProcessingQueue() {
       )}
 
       {!loadingSubmissions && submissions.length === 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-8 text-center text-sm text-gray-400">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center text-sm text-gray-400">
           No submissions yet for this assignment. Upload some in Ingestion Hub first.
         </div>
       )}
