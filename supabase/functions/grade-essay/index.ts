@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY")
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")
+const CEREBRAS_API_KEY = Deno.env.get("CEREBRAS_API_KEY")
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,8 +43,8 @@ async function callGroq(prompt: string, imageBase64?: string) {
 
   const content: any[] = [{ type: "text", text: prompt }]
   const model = imageBase64
-    ? "meta-llama/llama-4-scout-17b-16e-instruct" // vision-capable
-    : "llama-3.3-70b-versatile" // text-only, faster
+    ? "meta-llama/llama-4-scout-17b-16e-instruct"
+    : "llama-3.3-70b-versatile"
 
   if (imageBase64) {
     content.push({ type: "image_url", image_url: { url: imageBase64 } })
@@ -73,36 +73,38 @@ async function callGroq(prompt: string, imageBase64?: string) {
   return text
 }
 
-// ---------- FALLBACK: Gemini ----------
-async function callGemini(prompt: string, imageBase64?: string) {
-  if (!GEMINI_API_KEY) {
-    throw new Error("Gemini fallback not configured (no API key set)")
+// ---------- FALLBACK: Cerebras ----------
+async function callCerebras(prompt: string, imageBase64?: string) {
+  if (!CEREBRAS_API_KEY) {
+    throw new Error("Cerebras fallback not configured (no API key set)")
   }
 
-  const parts: any[] = [{ text: prompt }]
+  // Cerebras' free-tier catalog is text-only; if an image essay somehow
+  // reaches the fallback, we can't grade the image itself here.
   if (imageBase64) {
-    const [meta, data] = imageBase64.split(",")
-    const mimeType = meta.match(/data:(.*);base64/)?.[1] || "image/jpeg"
-    parts.push({ inline_data: { mime_type: mimeType, data } })
+    throw new Error("Cerebras fallback does not support image input")
   }
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts }] }),
-    }
-  )
+  const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${CEREBRAS_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b",
+      messages: [{ role: "user", content: prompt }],
+    }),
+  })
 
   if (!res.ok) {
     const errText = await res.text()
-    throw new Error(`Gemini error ${res.status}: ${errText}`)
+    throw new Error(`Cerebras error ${res.status}: ${errText}`)
   }
 
   const data = await res.json()
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) throw new Error("Gemini returned no content")
+  const text = data.choices?.[0]?.message?.content
+  if (!text) throw new Error("Cerebras returned no content")
   return text
 }
 
@@ -128,9 +130,9 @@ Deno.serve(async (req: Request) => {
       rawText = await callGroq(prompt, imageBase64)
     } catch (groqError) {
       const msg = groqError instanceof Error ? groqError.message : String(groqError)
-      console.error("Groq failed, trying Gemini fallback:", msg)
-      engineUsed = "gemini"
-      rawText = await callGemini(prompt, imageBase64)
+      console.error("Groq failed, trying Cerebras fallback:", msg)
+      engineUsed = "cerebras"
+      rawText = await callCerebras(prompt, imageBase64)
     }
 
     const latencyMs = Date.now() - startTime

@@ -1,18 +1,45 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Plus, Trash2, Lightbulb, CheckCircle2, Loader2, AlertCircle, GripVertical } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import PageHeader from '../components/PageHeader'
 
+const DRAFT_KEY = 'inksight:rubric-draft'
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 export default function RubricBuilder() {
   const { user } = useAuth()
-  const [title, setTitle] = useState('')
-  const [maxScore, setMaxScore] = useState(100)
-  const [prompt, setPrompt] = useState('')
-  const [guidance, setGuidance] = useState('')
-  const [concepts, setConcepts] = useState([{ id: 1, label: '', points: 0 }])
+  const draft = useRef(loadDraft()).current
+
+  const [title, setTitle] = useState(draft?.title || '')
+  const [maxScore, setMaxScore] = useState(draft?.maxScore ?? 100)
+  const [prompt, setPrompt] = useState(draft?.prompt || '')
+  const [guidance, setGuidance] = useState(draft?.guidance || '')
+  const [concepts, setConcepts] = useState(draft?.concepts || [{ id: 1, label: '', points: 0 }])
   const [saveStatus, setSaveStatus] = useState('idle')
   const [errorMessage, setErrorMessage] = useState('')
+  const [draftRestored] = useState(!!draft)
+
+  // Auto-save whenever any field changes
+  useEffect(() => {
+    const hasContent = title || prompt || guidance || concepts.some((c) => c.label)
+    if (!hasContent) {
+      localStorage.removeItem(DRAFT_KEY)
+      return
+    }
+    const timeout = setTimeout(() => {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, maxScore, prompt, guidance, concepts }))
+    }, 400) // small debounce so typing doesn't hammer localStorage
+    return () => clearTimeout(timeout)
+  }, [title, maxScore, prompt, guidance, concepts])
 
   const addConcept = () => setConcepts([...concepts, { id: Date.now(), label: '', points: 0 }])
   const updateConcept = (id, field, value) =>
@@ -20,6 +47,15 @@ export default function RubricBuilder() {
   const removeConcept = (id) => setConcepts(concepts.filter((c) => c.id !== id))
 
   const allocatedPoints = concepts.reduce((sum, c) => sum + (Number(c.points) || 0), 0)
+
+  const clearDraftAndReset = () => {
+    localStorage.removeItem(DRAFT_KEY)
+    setTitle('')
+    setMaxScore(100)
+    setPrompt('')
+    setGuidance('')
+    setConcepts([{ id: 1, label: '', points: 0 }])
+  }
 
   const handleSave = async () => {
     setErrorMessage('')
@@ -58,6 +94,8 @@ export default function RubricBuilder() {
       return
     }
 
+    // Rubric saved successfully — the draft is no longer needed
+    localStorage.removeItem(DRAFT_KEY)
     setSaveStatus('success')
     setTimeout(() => setSaveStatus('idle'), 2200)
   }
@@ -76,6 +114,15 @@ export default function RubricBuilder() {
           </span>
         )}
       </div>
+
+      {draftRestored && (
+        <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-100 text-amber-700 text-xs rounded-xl px-4 py-2.5 mb-5">
+          <span>Restored an unsaved draft from earlier.</span>
+          <button onClick={clearDraftAndReset} className="font-semibold hover:underline shrink-0">
+            Discard draft
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main form */}
