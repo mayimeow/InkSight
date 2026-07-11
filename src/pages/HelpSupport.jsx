@@ -63,7 +63,7 @@ export default function HelpSupport() {
           <div>
             <p className="text-sm font-semibold text-gray-800">Email Support</p>
             <p className="text-xs text-gray-500 mt-1">Have a question we didn't cover? Reach out directly.</p>
-            <a href="mailto:support@inksight.app" className="text-xs text-ink-maroon font-semibold hover:underline mt-2 inline-block">
+            <a href="mailto:maryanngumafelix08@gmail.com" className="text-xs text-ink-maroon font-semibold hover:underline mt-2 inline-block">
               maryanngumafelix08@gmail.com
             </a>
           </div>
