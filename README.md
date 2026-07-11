@@ -9,6 +9,8 @@ InkSight is a smart grading assistant that saves teachers hours of manual work. 
 ## 🚀 The Mission
 To eliminate grading bottlenecks while generating structured, actionable data from unstructured handwritten text. InkSight honors the traditional element of education (handwritten expression) while utilizing a fault-tolerant, ultra-low latency AI architecture and rigorous data privacy standards to support teachers.
 
+CHECK IT OUT: https://ink-sight-lac.vercel.app/ 
+
 ## 🛠️ Technology Stack
 * **Frontend:** React.js (Vite) styled with Tailwind CSS
 * **Database & Auth:** Supabase (PostgreSQL)
@@ -62,4 +64,6 @@ Moving beyond simple grading, InkSight stores execution metadata and structured 
                                                      │
                                                      ▼
                                          [ Recharts BI Dashboard ]
+
+
 ```
