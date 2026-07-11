@@ -7,14 +7,14 @@ InkSight is a smart grading assistant that saves teachers hours of manual work. 
 ---
 
 ## 🚀 The Mission
-To eliminate grading bottlenecks while generating structured, actionable data from unstructured handwritten text. InkSight honors the traditional element of education (handwritten expression) while utilizing a fault-tolerant AI architecture and rigorous data privacy standards to support teachers.
+To eliminate grading bottlenecks while generating structured, actionable data from unstructured handwritten text. InkSight honors the traditional element of education (handwritten expression) while utilizing a fault-tolerant, ultra-low latency AI architecture and rigorous data privacy standards to support teachers.
 
 ## 🛠️ Technology Stack
 * **Frontend:** React.js (Vite) styled with Tailwind CSS
 * **Database & Auth:** Supabase (PostgreSQL)
-* **Primary AI Engine:** Google Gemini 1.5 Flash API (Multimodal Image + Text)
-* **Fallback AI Engine:** OpenAI API (GPT-4o-mini)
-* **Image Processing:** Native HTML5/JavaScript File API (Base64 conversion)
+* **Primary AI Engine:** Groq API (Ultra-fast LLM inference)
+* **Fallback AI Engine:** Cerebras API (High-performance redundancy)
+* **Image Processing:** Native HTML5/JavaScript File API (Base64 conversion / OCR prep)
 * **Data Visualization:** Recharts
 
 ---
@@ -22,7 +22,7 @@ To eliminate grading bottlenecks while generating structured, actionable data fr
 ## ✨ Core Engineering Features
 
 ### 🧠 The Dual-Brain Fail-Safe Pipeline
-Implements a redundant `try/catch` routing system. If the primary Gemini model times out or hits a rate limit, the system silently intercepts the failure and routes the exact prompt to the OpenAI fallback, ensuring zero downtime for the user.
+Implements a redundant `try/catch` routing system. If the primary Groq inference engine times out or hits a rate limit, the system silently intercepts the failure and routes the exact prompt to the Cerebras fallback, ensuring zero downtime for the user and lightning-fast responses regardless of traffic.
 
 ### 🚦 Concurrency Control & Rate Limit Management
 To prevent `429 Too Many Requests` errors when processing batch uploads (e.g., 40+ essays), the ingestion pipeline utilizes a Promise Queue to orchestrate asynchronous API requests in controlled, localized batches.
@@ -51,9 +51,9 @@ Moving beyond simple grading, InkSight stores execution metadata and structured 
             │                                           │
             └─────────────────────┬─────────────────────┘
                                   ▼
-                       [ Gemini 1.5 Flash ] ──(If 429/Fail)──> [ GPT-4o-Mini ]
-                                  │                                   │
-                                  └──────────────────┬────────────────┘
+                       [ Groq API Engine ] ──(If 429/Fail)──> [ Cerebras API ]
+                                  │                                  │
+                                  └──────────────────┬───────────────┘
                                                      ▼
                                          [ Structured JSON Result ]
                                                      │
@@ -62,3 +62,4 @@ Moving beyond simple grading, InkSight stores execution metadata and structured 
                                                      │
                                                      ▼
                                          [ Recharts BI Dashboard ]
+```
