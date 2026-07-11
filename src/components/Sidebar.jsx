@@ -8,7 +8,9 @@ import {
   Settings as SettingsIcon,
   HelpCircle,
   X,
+  LogOut,
 } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 const navItems = [
   { path: '/', label: 'Rubric Builder', icon: PenLine },
@@ -20,6 +22,8 @@ const navItems = [
 ]
 
 export default function Sidebar({ isOpen, onClose }) {
+  const { user, signOut } = useAuth()
+
   return (
     <>
       {/* Backdrop - mobile only, shown when drawer is open */}
@@ -81,6 +85,16 @@ export default function Sidebar({ isOpen, onClose }) {
           <HelpCircle size={18} />
           Help & Support
         </NavLink>
+
+        <div className="border-t border-white/10 mt-2 pt-3 px-2">
+          <p className="text-xs text-white/60 truncate mb-2">{user?.email}</p>
+          <button
+            onClick={signOut}
+            className="flex items-center gap-2 text-sm text-white/80 hover:text-white transition-colors"
+          >
+            <LogOut size={16} /> Log Out
+          </button>
+        </div>
       </aside>
     </>
   )

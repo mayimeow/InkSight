@@ -12,6 +12,21 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
+function AlertBox({ type, children }) {
+  const styles = {
+    error: 'bg-red-50 border-red-200 text-red-600',
+    success: 'bg-green-50 border-green-200 text-green-700',
+  }
+  const Icon = type === 'error' ? AlertCircle : CheckCircle2
+
+  return (
+    <div className={`flex items-start gap-2 text-sm border rounded-lg p-3 ${styles[type]}`}>
+      <Icon size={16} className="shrink-0 mt-0.5" />
+      <span>{children}</span>
+    </div>
+  )
+}
+
 export default function IngestionHub() {
   const [mode, setMode] = useState('csv') // 'csv' | 'photos'
 
@@ -171,7 +186,7 @@ export default function IngestionHub() {
         assignment_id: selectedAssignmentId,
         student_name: p.studentName.trim(),
         section: p.section.trim(),
-        raw_content: p.previewUrl, // base64 image string
+        raw_content: p.previewUrl,
         status: 'PENDING',
       }))
     }
@@ -195,10 +210,9 @@ export default function IngestionHub() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-6">
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div>
         <h1 className="text-xl md:text-2xl font-bold text-ink-maroon flex items-center gap-2">
-          <span className="bg-ink-maroon text-white text-sm w-6 h-6 flex items-center justify-center rounded-full">2</span>
           Ingestion Hub
         </h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -207,16 +221,14 @@ export default function IngestionHub() {
       </div>
 
       {/* Assignment selector */}
-      <div className="bg-white rounded-xl shadow-sm p-5 mb-6">
-        <label className="block text-sm text-gray-600 mb-1">Assignment</label>
+      <div className="bg-white rounded-xl shadow-sm p-5">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Assignment</label>
         {loadingAssignments ? (
           <p className="text-sm text-gray-400 flex items-center gap-2">
             <Loader2 size={14} className="animate-spin" /> Loading assignments...
           </p>
         ) : assignments.length === 0 ? (
-          <p className="text-sm text-red-500">
-            No assignments found. Create one in Rubric Builder first.
-          </p>
+          <AlertBox type="error">No assignments found. Create one in Rubric Builder first.</AlertBox>
         ) : (
           <select
             value={selectedAssignmentId}
@@ -231,41 +243,45 @@ export default function IngestionHub() {
       </div>
 
       {/* Mode toggle */}
-      <div className="flex gap-2 mb-4">
+      <div className="grid grid-cols-2 gap-2 bg-white rounded-xl shadow-sm p-1.5">
         <button
           onClick={() => setMode('csv')}
-          className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-            mode === 'csv' ? 'bg-ink-maroon text-white' : 'bg-white text-gray-600 border border-gray-300'
+          className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+            mode === 'csv' ? 'bg-ink-maroon text-white' : 'text-gray-600 hover:bg-gray-50'
           }`}
         >
-          <FileText size={16} /> Upload CSV (Typed Essays)
+          <FileText size={16} />
+          <span className="hidden sm:inline">Upload CSV (Typed Essays)</span>
+          <span className="sm:hidden">CSV</span>
         </button>
         <button
           onClick={() => setMode('photos')}
-          className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-            mode === 'photos' ? 'bg-ink-maroon text-white' : 'bg-white text-gray-600 border border-gray-300'
+          className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+            mode === 'photos' ? 'bg-ink-maroon text-white' : 'text-gray-600 hover:bg-gray-50'
           }`}
         >
-          <ImageIcon size={16} /> Upload Photos (Handwritten Essays)
+          <ImageIcon size={16} />
+          <span className="hidden sm:inline">Upload Photos (Handwritten)</span>
+          <span className="sm:hidden">Photos</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Upload zone + preview */}
         <div className="lg:col-span-2 space-y-4">
           <div
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+            className={`border-2 border-dashed rounded-xl p-8 md:p-10 text-center transition-colors ${
               isDragging ? 'border-ink-maroon bg-ink-maroon/5' : 'border-gray-300 bg-white'
             }`}
           >
             <Upload className="mx-auto mb-3 text-ink-maroon" size={32} />
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-gray-600 mb-4">
               Drag & drop your {mode === 'csv' ? 'CSV file' : 'photos'} here
             </p>
-            <label className="inline-block bg-ink-maroon text-white text-sm font-semibold px-4 py-2 rounded-lg cursor-pointer hover:bg-ink-maroon-dark transition-colors">
+            <label className="inline-block bg-ink-maroon text-white text-sm font-semibold px-5 py-2.5 rounded-lg cursor-pointer hover:bg-ink-maroon-dark transition-colors">
               {mode === 'csv' ? 'Choose CSV File' : 'Choose Photos'}
               <input
                 type="file"
@@ -277,28 +293,24 @@ export default function IngestionHub() {
                 }
               />
             </label>
-            <p className="text-xs text-gray-400 mt-3">
+            <p className="text-xs text-gray-400 mt-4">
               {mode === 'csv' ? 'Supports .csv files' : 'Supports .jpg, .png — max 10MB per image'}
             </p>
           </div>
 
-          {mode === 'csv' && csvError && (
-            <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3">
-              <AlertCircle size={16} className="shrink-0" /> {csvError}
-            </div>
-          )}
+          {mode === 'csv' && csvError && <AlertBox type="error">{csvError}</AlertBox>}
 
           {mode === 'csv' && parsedRows.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-4 overflow-x-auto">
+            <div className="bg-white rounded-xl shadow-sm p-4 md:p-5 overflow-x-auto">
               <p className="text-sm font-medium text-gray-700 mb-3">
                 {csvFileName} — {parsedRows.length} student{parsedRows.length !== 1 ? 's' : ''} found
               </p>
               <table className="w-full text-sm min-w-125">
                 <thead>
                   <tr className="text-left text-gray-500 border-b">
-                    <th className="py-2 pr-4">Student</th>
-                    <th className="py-2 pr-4">Section</th>
-                    <th className="py-2">Essay Preview</th>
+                    <th className="py-2 pr-4 font-medium">Student</th>
+                    <th className="py-2 pr-4 font-medium">Section</th>
+                    <th className="py-2 font-medium">Essay Preview</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -318,30 +330,32 @@ export default function IngestionHub() {
           )}
 
           {mode === 'photos' && photoEntries.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+            <div className="bg-white rounded-xl shadow-sm p-4 md:p-5 space-y-3">
               <p className="text-sm font-medium text-gray-700">
                 {photoEntries.length} photo{photoEntries.length !== 1 ? 's' : ''} added
               </p>
               {photoEntries.map((p) => (
-                <div key={p.id} className="flex items-center gap-3 border border-gray-200 rounded-lg p-2">
+                <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-2 border border-gray-200 rounded-lg p-2">
                   <img src={p.previewUrl} alt="essay" className="w-14 h-14 object-cover rounded-md shrink-0" />
-                  <input
-                    type="text"
-                    placeholder="Student name"
-                    value={p.studentName}
-                    onChange={(e) => updatePhotoEntry(p.id, 'studentName', e.target.value)}
-                    className="flex-1 min-w-0 border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Section"
-                    value={p.section}
-                    onChange={(e) => updatePhotoEntry(p.id, 'section', e.target.value)}
-                    className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
-                  />
-                  <button onClick={() => removePhotoEntry(p.id)} className="text-red-500 hover:text-red-700 shrink-0">
-                    <X size={18} />
-                  </button>
+                  <div className="flex flex-1 gap-2 min-w-0">
+                    <input
+                      type="text"
+                      placeholder="Student name"
+                      value={p.studentName}
+                      onChange={(e) => updatePhotoEntry(p.id, 'studentName', e.target.value)}
+                      className="flex-1 min-w-0 border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Section"
+                      value={p.section}
+                      onChange={(e) => updatePhotoEntry(p.id, 'section', e.target.value)}
+                      className="w-20 sm:w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
+                    />
+                    <button onClick={() => removePhotoEntry(p.id)} className="text-red-500 hover:text-red-700 shrink-0">
+                      <X size={18} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -352,10 +366,12 @@ export default function IngestionHub() {
         <div className="bg-white rounded-xl shadow-sm p-5 flex flex-col gap-4">
           <div>
             <h2 className="font-semibold text-gray-800 mb-2">Upload Guidelines</h2>
-            <div className="text-xs text-gray-500 space-y-2">
-              <p><strong>CSV format:</strong> columns student_name, section, essay_content (one row per student)</p>
-              <p><strong>Image tips:</strong> clear, well-lit photos, .jpg/.png, max 10MB each</p>
-            </div>
+            <ul className="text-xs text-gray-500 space-y-1.5 list-disc pl-4">
+              <li><strong className="text-gray-600">CSV format:</strong> columns student_name, section, essay_content (one row per student)</li>
+              <li><strong className="text-gray-600">Image tips:</strong> clear, well-lit photos</li>
+              <li>Supported formats: .jpg, .png</li>
+              <li>Max file size: 10MB per image</li>
+            </ul>
           </div>
 
           <div className="flex items-start gap-2 bg-ink-cream border border-ink-gold/30 rounded-lg p-3 text-xs text-gray-600">
@@ -366,22 +382,14 @@ export default function IngestionHub() {
           <button
             onClick={handleSubmit}
             disabled={submitStatus === 'submitting'}
-            className="mt-auto w-full bg-ink-maroon text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-ink-maroon-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-ink-maroon text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-ink-maroon-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitStatus === 'submitting' && <Loader2 size={16} className="animate-spin" />}
             {submitStatus === 'submitting' ? 'Uploading...' : 'Submit to Queue'}
           </button>
 
-          {submitStatus === 'success' && (
-            <div className="flex items-center gap-2 text-green-600 text-sm">
-              <CheckCircle2 size={16} /> Submissions added to queue
-            </div>
-          )}
-          {submitStatus === 'error' && (
-            <div className="flex items-center gap-2 text-red-600 text-xs">
-              <AlertCircle size={14} /> {submitError}
-            </div>
-          )}
+          {submitStatus === 'success' && <AlertBox type="success">Submissions added to queue</AlertBox>}
+          {submitStatus === 'error' && <AlertBox type="error">{submitError}</AlertBox>}
         </div>
       </div>
     </div>

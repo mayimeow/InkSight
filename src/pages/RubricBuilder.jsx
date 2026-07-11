@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Plus, Trash2, Lightbulb, CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { useAuth } from '../context/AuthContext'
 
 export default function RubricBuilder() {
+  const { user } = useAuth()
   const [title, setTitle] = useState('')
   const [maxScore, setMaxScore] = useState(100)
   const [prompt, setPrompt] = useState('')
@@ -39,6 +41,11 @@ export default function RubricBuilder() {
       setSaveStatus('error')
       return
     }
+    if (!user) {
+      setErrorMessage('You must be logged in to save a rubric.')
+      setSaveStatus('error')
+      return
+    }
 
     setSaveStatus('saving')
 
@@ -48,6 +55,7 @@ export default function RubricBuilder() {
       rubric_guidance: guidance,
       concepts,
       max_score: maxScore,
+      teacher_id: user.id,
     })
 
     if (error) {
@@ -65,8 +73,7 @@ export default function RubricBuilder() {
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-ink-maroon flex items-center gap-2">
-            <span className="bg-ink-maroon text-white text-sm w-6 h-6 flex items-center justify-center rounded-full">1</span>
+          <h1 className="text-xl md:text-2xl font-bold text-ink-maroon">
             Rubric Builder
           </h1>
           <p className="text-sm text-gray-500 mt-1">
