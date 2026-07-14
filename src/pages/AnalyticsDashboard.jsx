@@ -284,7 +284,7 @@ export default function AnalyticsDashboard() {
       {/* Feedback modal */}
       {selectedSubmission && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSelectedSubmission(null)}>
-          <div className="bg-white rounded-2xl shadow-lg max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="font-display font-semibold text-gray-900 text-lg">{selectedSubmission.student_name}</h3>
@@ -310,11 +310,26 @@ export default function AnalyticsDashboard() {
               )}
             </div>
 
-            <div>
+            <div className="mb-4">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">AI Feedback</p>
               <p className="text-sm text-gray-700 bg-ink-cream rounded-xl p-3.5 leading-relaxed">
                 {selectedSubmission.ai_feedback?.feedback || 'No feedback available.'}
               </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Student's Answer</p>
+              {selectedSubmission.raw_content?.startsWith('data:image') ? (
+                <img
+                  src={selectedSubmission.raw_content}
+                  alt={`${selectedSubmission.student_name}'s essay`}
+                  className="w-full max-h-80 object-contain rounded-xl border border-gray-100 bg-gray-50"
+                />
+              ) : (
+                <div className="text-sm text-gray-700 bg-gray-50 border border-gray-100 rounded-xl p-3.5 leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap">
+                  {selectedSubmission.raw_content || 'No content available.'}
+                </div>
+              )}
             </div>
           </div>
         </div>
